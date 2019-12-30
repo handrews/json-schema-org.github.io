@@ -164,3 +164,34 @@ keyword | change | notes
 keyword | change | notes
 ---- | ---- | ----
 [`rel`](/draft/2019-09/json-schema-hypermedia.html#rfc.section.6.2.1) | **changed** | Can now be an array of values instead of just a string
+
+
+### Why did we change... ?
+
+#### `definitions` to `$defs`?
+
+With the new focus on vocabularies, a key step was to clearly identify the Core vocabulary.  This is the vocabulary that is required in order to ensure essential ineroperability and bootstrap the processing of any other vocabulary.  It is the only one that all implementations, no matter their purpose, MUST support.
+
+We decided that all Core keywords would have the `$` prefix to emphasize that they are fundamentally different from keywords in other vocabularies.  We previously moved in this direction by replacing `id` with `$id` in draft-06, although that also was related to rampant confusion between the `id` keyword and "id" as a very common instance property name.
+
+Finally, we decided that the two existing [reserved location](https://json-schema.org/draft/2019-09/json-schema-core.html#rfc.section.7.8) keywords belonged in the Core vocabulary, because the entire point of these keywords is to ensure interoperability by providing safe locations to store comments or re-usable schemas, that cannot be redefined to do anything else.
+
+This meant that, at minimum, `definitions` needed to become `$definitions` and move from the Meta-data section of the Validation spec to the Core vocabulary section of the Core spec.
+
+As for why `$defs` rather than `$definitions`, this is a keyword that gets typed over and over in JSON Pointer reference URIs, and shortening it seemed like a nice thing to do.  Less seriously, spec editor Henry Andrews is incapable of spelling "definitions" correctly, and usually types "definitoins" instead, and got tired of causing bugs that way.  Other keywords could arguably benefit from shortening, but we didnt want to change keywords just for that reason.
+
+#### Allowing keywords adjacent to `$ref`?
+
+There were numerous reasons for this:
+
+1.  People tended to do it already and get upset when it didn't work
+1.  We wanted `$ref` to behave like a normal keyword instead of this weird separate thing with its own mental model
+1.  Our own test suite implied that annotation keywords (specifically `definitions`) were allowed next to `$ref`, and we could not reach agreement on how or even whether that was supposed to work with the existing `$ref` behavior
+
+"Normal keywords" in this sense means "keywords that are evaluated by their own rules and produce validation and assertion results."
+
+Prior to this draft, `$ref` did not do this.  It logically (but lazily) replaced the object containing the `$ref` with the target of the reference.  This is why adjacent keywords had to be ignored- the whole object was replaced!  Nothing else in JSON Schema behaved like this.
+
+Applicators are a type of normal keyword that apply and evaluate another schema object and return its results (possibly applying some logic to them such as how `anyOf` ORs the results while `allOf` ANDs them).  `$ref` fits into this nicely: the schema it evaluates is specified by reference rather than appearing inline, but the process of producing results is the same as with a subschema of any other applicator once you follow that reference.
+
+While the change may be confusing for existing users, being able to talk about `$ref` as an applicator keyword that produces validation and annotatoin results like other applicators except by reference instead of with an inline child schema, is much more straightforward.
